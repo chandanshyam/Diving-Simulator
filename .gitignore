@@ -147,3 +147,5 @@ dive-logs/
 # User preferences and settings (if any)
 user-settings.json
 dashboard-config.json
+
+.kiro/
