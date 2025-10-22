@@ -15,7 +15,7 @@ const styles = {
   }
 };
 
-const Barometer = ({ id, value, title }) => {
+const DiverDepth = ({ id, value, title }) => {
   return (
     <div style={styles.dial}>
       <Chart
@@ -27,19 +27,19 @@ const Barometer = ({ id, value, title }) => {
           ["", Number(value)]
         ]}
         options={{
-          redFrom: 25,
-          redTo: 30,
-          yellowFrom: 20,
-          yellowTo: 25,
+          redFrom: 200,
+          redTo: 250,
+          yellowFrom: 150,
+          yellowTo: 200,
           greenFrom: 0,
-          greenTo: 20,
-          minorTicks: 5,
+          greenTo: 150,
+          minorTicks: 10,
           min: 0,
-          max: 30
+          max: 250
         }}
       />
     </div>
   );
 };
 
-export default Barometer;
+export default DiverDepth;

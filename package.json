@@ -1,28 +1,26 @@
 {
-  "name": "react-gauge-battery",
+  "name": "scuba-diving-dashboard",
   "version": "1.0.0",
-  "description": "",
-  "keywords": [],
+  "description": "Professional Scuba Diving Simulation Dashboard for Training and Testing",
+  "keywords": ["scuba", "diving", "simulation", "dashboard", "training", "react"],
   "main": "src/index.js",
   "dependencies": {
-    "lodash": "4.17.20",
-    "react": "16.8.6",
-    "react-canvas-gauges": "1.2.1",
-    "react-d3-speedometer": "0.12.0",
-    "react-dom": "16.8.6",
-    "react-gauge-chart": "0.2.5",
-    "react-google-charts": "3.0.15",
-    "react-scripts": "3.0.1",
-    "react-stopwatch-timer": "1.0.0",
-    "react-thermometer-component": "1.0.1"
+    "lodash": "^4.17.21",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-gauge-chart": "^0.4.1",
+    "react-google-charts": "^4.0.1",
+    "react-scripts": "^5.0.1",
+    "recharts": "^2.12.7",
+    "zustand": "^4.5.5"
   },
   "devDependencies": {
-    "typescript": "3.3.3"
+    "typescript": "^5.5.4"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test --env=jsdom",
+    "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
   "browserslist": [

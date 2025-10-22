@@ -1,21 +1,36 @@
+/* Import theme variables */
+@import './styles/theme.css';
+
+/* Legacy App styles - updated for dark ocean theme */
 .App {
-  font-family: sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
+  background: linear-gradient(135deg, var(--ocean-blue-900), var(--ocean-blue-950));
+  color: var(--text-primary);
+  min-height: 100vh;
+  padding: var(--spacing-lg);
 }
 
 .dials {
-  font-family: sans-serif;
+  font-family: inherit;
   text-align: center;
   display: flex;
   flex-direction: row;
   align-items: center;
+  gap: var(--spacing-lg);
 }
 
 .App .title {
-  margin: 40px;
+  margin: var(--spacing-xl);
+  color: var(--text-primary);
+  font-size: 2rem;
+  font-weight: 700;
+  text-shadow: 0 2px 4px var(--shadow-color);
 }
 
 * {
@@ -26,32 +41,128 @@
   margin: 0 auto;
 }
 
+/* Enhanced slider styles with ocean theme */
 .slider {
   -webkit-appearance: none;
   width: 300px;
-  height: 15px;
-  border-radius: 5px;
-  background: #d3d3d3;
+  height: 8px;
+  border-radius: var(--radius-sm);
+  background: var(--ocean-slate);
   outline: none;
-  opacity: 0.7;
-  -webkit-transition: 0.2s;
-  transition: opacity 0.2s;
+  transition: all var(--transition-normal);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.slider:hover {
+  background: #475569;
 }
 
 .slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 25px;
-  height: 25px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: #3f5c8c;
+  background: linear-gradient(135deg, var(--ocean-cyan), var(--ocean-teal));
   cursor: pointer;
+  box-shadow: 0 4px 8px var(--shadow-color);
+  transition: all var(--transition-fast);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 12px var(--shadow-color), 0 0 20px rgba(6, 182, 212, 0.4);
 }
 
 .slider::-moz-range-thumb {
-  width: 25px;
-  height: 25px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: #3f5c8c;
+  background: linear-gradient(135deg, var(--ocean-cyan), var(--ocean-teal));
   cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 8px var(--shadow-color);
+  transition: all var(--transition-fast);
+}
+
+.slider::-moz-range-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 12px var(--shadow-color), 0 0 20px rgba(6, 182, 212, 0.4);
+}
+
+/* Enhanced gauge container with ocean theme */
+.gauge-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: stretch;
+  gap: var(--spacing-lg);
+  width: 100%;
+  max-width: 1200px;
+  margin: var(--spacing-lg) auto;
+}
+
+/* Ocean-themed gauge cards */
+.gauge-card {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-xl);
+  box-shadow: 
+    0 8px 32px var(--shadow-color),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  padding: var(--spacing-lg);
+  width: 280px;
+  height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-normal);
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Glowing edge effect */
+.gauge-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: var(--radius-xl);
+  padding: 1px;
+  background: linear-gradient(135deg, 
+    rgba(6, 182, 212, 0.3), 
+    rgba(13, 148, 136, 0.2), 
+    rgba(6, 182, 212, 0.3)
+  );
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+}
+
+.gauge-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 
+    0 12px 40px var(--shadow-color),
+    0 0 30px rgba(6, 182, 212, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border-color: rgba(6, 182, 212, 0.4);
+}
+
+.gauge-card:hover::before {
+  opacity: 1;
+}
+
+.gauge-title {
+  margin: var(--spacing-md) 0 0 0;
+  font-size: 1.1em;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+  text-shadow: 0 1px 2px var(--shadow-color);
 }

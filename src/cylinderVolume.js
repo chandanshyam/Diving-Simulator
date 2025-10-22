@@ -15,7 +15,7 @@ const styles = {
   }
 };
 
-const Barometer = ({ id, value, title }) => {
+const CylinderVolume = ({ id, value, title }) => {
   return (
     <div style={styles.dial}>
       <Chart
@@ -27,19 +27,19 @@ const Barometer = ({ id, value, title }) => {
           ["", Number(value)]
         ]}
         options={{
-          redFrom: 25,
-          redTo: 30,
-          yellowFrom: 20,
-          yellowTo: 25,
+          redFrom: 80,
+          redTo: 100,
+          yellowFrom: 60,
+          yellowTo: 80,
           greenFrom: 0,
-          greenTo: 20,
+          greenTo: 60,
           minorTicks: 5,
           min: 0,
-          max: 30
+          max: 100
         }}
       />
     </div>
   );
 };
 
-export default Barometer;
+export default CylinderVolume;
