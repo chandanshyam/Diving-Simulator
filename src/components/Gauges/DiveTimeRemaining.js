@@ -1,14 +1,20 @@
 import { Chart } from "react-google-charts";
 import useDivingStore from "../../store/divingStore.js";
+import GaugeWrapper from "./GaugeWrapper.js";
 
 const DiveTimeRemaining = ({ title = "Dive Time Remaining" }) => {
   const remainingDiveTime = useDivingStore((state) => state.remainingDiveTime);
 
-  
-
-
   return (
-    <>
+    <GaugeWrapper
+      currentValue={remainingDiveTime}
+      alertThreshold={5}
+      minValue={0}
+      maxValue={60}
+      unit="min"
+      alertOnLow={true}
+      showLabels={true}
+    >
       <div className="gauge-title">{title}</div>
       <Chart
         height={200}
@@ -30,13 +36,13 @@ const DiveTimeRemaining = ({ title = "Dive Time Remaining" }) => {
           min: 0,
           max: 60,
           animation: {
-            duration: 500,
-            easing: 'out'
+            duration: 400,
+            easing: 'inAndOut'
           },
           backgroundColor: 'transparent'
         }}
       />
-    </>
+    </GaugeWrapper>
   );
 };
 

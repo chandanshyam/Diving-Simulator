@@ -3,6 +3,7 @@ import ControlPanel from './ControlPanel/ControlPanel.js';
 import GaugeGrid from './Gauges/GaugeGrid.js';
 import Analytics from './Analytics/Analytics.js';
 import { AlertSystem, LoadingOverlay } from './UI/index.js';
+import AudioAlertMonitor from './UI/AudioAlertMonitor.js';
 import useSimulationEngine from '../hooks/useSimulationEngine.js';
 
 import useDivingStore from '../store/divingStore.js';
@@ -105,6 +106,8 @@ const Dashboard = memo(() => {
           <div className="dashboard-subtitle">
             Professional Training & Testing Platform
           </div>
+          {/* Audio Alert Monitor with mute/unmute toggle */}
+          <AudioAlertMonitor />
         </div>
         
         <div className="dashboard-content">

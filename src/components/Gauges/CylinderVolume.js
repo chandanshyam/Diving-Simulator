@@ -1,5 +1,6 @@
 import { Chart } from "react-google-charts";
 import useDivingStore from "../../store/divingStore.js";
+import GaugeWrapper from "./GaugeWrapper.js";
 
 const CylinderPressure = ({ cylinderNumber, title }) => {
   const cylinder1Pressure = useDivingStore((state) => state.cylinder1Pressure);
@@ -9,7 +10,15 @@ const CylinderPressure = ({ cylinderNumber, title }) => {
   const displayTitle = title || `Cylinder ${cylinderNumber} Pressure`;
 
   return (
-    <>
+    <GaugeWrapper
+      currentValue={pressure}
+      alertThreshold={20}
+      minValue={0}
+      maxValue={200}
+      unit="bars"
+      alertOnLow={true}
+      showLabels={true}
+    >
       <div className="gauge-title">{displayTitle}</div>
       <Chart
         height={200}
@@ -31,13 +40,13 @@ const CylinderPressure = ({ cylinderNumber, title }) => {
           min: 0,
           max: 200,
           animation: {
-            duration: 500,
-            easing: 'out'
+            duration: 400,
+            easing: 'inAndOut'
           },
           backgroundColor: 'transparent'
         }}
       />
-    </>
+    </GaugeWrapper>
   );
 };
 

@@ -69,16 +69,18 @@ export const calculateCylinderDepletion = (currentVolume, airUsed, cylinderRatio
 };
 
 /**
- * Calculate umbilical pressure based on depth (for auto simulation)
- * Simulates pressure decrease with depth
+ * Calculate umbilical pressure based on depth
+ * Formula: Umbilical Pressure = 10 + (Depth / 10)
+ * - Starts at 10 bars at surface (0m)
+ * - Increases by 1 bar for every 10m of depth
+ * - Decreases by 1 bar for every 10m when ascending
  * @param {number} depth - Current depth in meters
- * @param {number} basePressure - Base surface pressure in bar
  * @returns {number} Umbilical pressure in bar
  */
-export const calculateUmbilicalPressure = (depth, basePressure = 25) => {
-  // Simulate pressure decrease with depth (simplified model)
-  const pressureLoss = depth * 0.2; // 0.2 bar loss per meter
-  return Math.max(5, basePressure - pressureLoss); // Minimum 5 bar
+export const calculateUmbilicalPressure = (depth) => {
+  // Base pressure at surface is 10 bars
+  // Add 1 bar for every 10 meters of depth
+  return 10 + (depth / 10);
 };
 
 /**
@@ -133,4 +135,81 @@ export const getDiverPressureZone = (pressure) => {
   if (pressure >= zones.green.min && pressure <= zones.green.max) return 'green';
   if (pressure >= zones.orange.min && pressure <= zones.orange.max) return 'orange';
   return 'red';
+};
+
+/**
+ * REALISTIC DIVING PHYSICS CALCULATIONS
+ */
+
+/**
+ * Calculate Absolute Pressure (ATA) based on depth
+ * Formula: ATA = (Depth / 10) + 1
+ * @param {number} depth - Depth in meters
+ * @returns {number} Absolute pressure in ATA
+ */
+export const calculateATA = (depth) => {
+  return (depth / 10) + 1;
+};
+
+/**
+ * Calculate instantaneous pressure drop per simulation second
+ * Each simulation second = 1 minute of real diving time
+ * Formula: pressure drop (bar/second) = (ATA * RMV) / Cylinder Volume
+ * @param {number} depth - Current depth in meters
+ * @param {number} rmv - Respiratory Minute Volume (L/min), default 15
+ * @param {number} cylinderVolume - Cylinder volume in liters, default 25
+ * @returns {number} Pressure drop in bars per simulation second
+ */
+export const calculatePressureDropPerSecond = (depth, rmv = 15, cylinderVolume = 25) => {
+  const ata = calculateATA(depth);
+  return (ata * rmv) / cylinderVolume;
+};
+
+/**
+ * Calculate new cylinder pressure after consumption
+ * @param {number} currentPressure - Current pressure in bars
+ * @param {number} depth - Current depth in meters
+ * @param {number} timeElapsed - Time elapsed in seconds (simulation seconds)
+ * @param {number} rmv - Respiratory Minute Volume (L/min), default 15
+ * @param {number} cylinderVolume - Cylinder volume in liters, default 25
+ * @returns {number} New pressure in bars
+ */
+export const calculateNewCylinderPressure = (currentPressure, depth, timeElapsed = 1, rmv = 15, cylinderVolume = 25) => {
+  const pressureDropPerSecond = calculatePressureDropPerSecond(depth, rmv, cylinderVolume);
+  const newPressure = currentPressure - (pressureDropPerSecond * timeElapsed);
+  return Math.max(0, newPressure); // Never go below 0
+};
+
+/**
+ * Convert cylinder pressure to volume percentage
+ * @param {number} pressure - Current pressure in bars
+ * @param {number} maxPressure - Maximum pressure in bars, default 200
+ * @returns {number} Volume percentage (0-100)
+ */
+export const pressureToVolumePercentage = (pressure, maxPressure = 200) => {
+  return (pressure / maxPressure) * 100;
+};
+
+/**
+ * Calculate remaining dive time based on current pressure and depth
+ * Formula: Remaining Time (min) = (Remaining Pressure × Cylinder Volume) / (ATA × RMV)
+ * @param {number} remainingPressure - Current cylinder pressure in bars
+ * @param {number} depth - Current depth in meters
+ * @param {number} rmv - Respiratory Minute Volume (L/min), default 15
+ * @param {number} cylinderVolume - Cylinder volume in liters, default 25
+ * @returns {number} Remaining dive time in minutes
+ */
+export const calculateRemainingDiveTimeRealistic = (remainingPressure, depth, rmv = 15, cylinderVolume = 25) => {
+  if (remainingPressure <= 0) return 0;
+
+  const ata = calculateATA(depth);
+  const consumptionRateAtDepth = ata * rmv; // L/min at current depth
+
+  // Total air available in liters at 1 bar
+  const totalAirAvailable = remainingPressure * cylinderVolume;
+
+  // Remaining time = Total air available / consumption rate at depth
+  const remainingTime = totalAirAvailable / consumptionRateAtDepth;
+
+  return Math.max(0, remainingTime);
 };

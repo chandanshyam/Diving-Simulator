@@ -1,5 +1,6 @@
 import { Chart } from "react-google-charts";
 import useDivingStore from "../../store/divingStore.js";
+import GaugeWrapper from "./GaugeWrapper.js";
 
 const DiverDepth = ({ diverNumber, title }) => {
   const diver1Depth = useDivingStore((state) => state.diver1Depth);
@@ -9,7 +10,15 @@ const DiverDepth = ({ diverNumber, title }) => {
   const displayTitle = title || `Diver ${diverNumber} Depth`;
 
   return (
-    <>
+    <GaugeWrapper
+      currentValue={depth}
+      alertThreshold={null}
+      minValue={0}
+      maxValue={40}
+      unit="m"
+      alertOnLow={false}
+      showLabels={true}
+    >
       <div className="gauge-title">{displayTitle}</div>
       <Chart
         height={200}
@@ -31,13 +40,13 @@ const DiverDepth = ({ diverNumber, title }) => {
           min: 0,
           max: 40,
           animation: {
-            duration: 500,
-            easing: 'out'
+            duration: 400,
+            easing: 'inAndOut'
           },
           backgroundColor: 'transparent'
         }}
       />
-    </>
+    </GaugeWrapper>
   );
 };
 

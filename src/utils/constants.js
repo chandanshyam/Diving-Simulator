@@ -18,9 +18,14 @@ export const SIMULATION_CONSTANTS = {
   
   // Default Values
   DEFAULT_DEPTH: 20, // meters
-  DEFAULT_DIVER1_DEPTH: 15, // meters
-  DEFAULT_DIVER2_DEPTH: 25, // meters
+  DEFAULT_DIVER1_DEPTH: 10, // meters (start at 10m)
+  DEFAULT_DIVER2_DEPTH: 10, // meters (start at 10m)
   DEFAULT_SELECTED_CYLINDER: 'Both',
+
+  // Realistic Diving Physics Constants
+  RMV: 15, // Respiratory Minute Volume at surface (L/min)
+  CYLINDER_VOLUME_LITERS: 25, // Cylinder volume in liters
+  START_PRESSURE_BAR: 200, // Starting pressure in bars
   
   // Gauge Ranges and Thresholds
   DEPTH_RANGE: { min: 0, max: 40 }, // meters
@@ -34,9 +39,9 @@ export const SIMULATION_CONSTANTS = {
   
   // Color Zone Thresholds
   UMBILICAL_PRESSURE_ZONES: {
-    green: { min: 0, max: 20 },
-    orange: { min: 20, max: 25 },
-    red: { min: 25, max: 30 }
+    red1: { min: 0, max: 7 },      // Low pressure - danger
+    green: { min: 7, max: 20 },    // Safe operating range
+    red2: { min: 20, max: 30 }     // High pressure - danger
   },
   
   CYLINDER_PRESSURE_ZONES: {
@@ -74,18 +79,20 @@ export const INITIAL_STATE = {
   
   // Dive Parameters
   depth: SIMULATION_CONSTANTS.DEFAULT_DEPTH,
-  diver1Depth: SIMULATION_CONSTANTS.DEFAULT_DIVER1_DEPTH,
-  diver2Depth: SIMULATION_CONSTANTS.DEFAULT_DIVER2_DEPTH,
+  diver1Depth: 0, // Start at surface (0m)
+  diver2Depth: 0, // Start at surface (0m)
   diver1Rate: 20, // L/min
   diver2Rate: 25, // L/min
   selectedCylinder: SIMULATION_CONSTANTS.DEFAULT_SELECTED_CYLINDER,
   
   // Gauge Values (initial realistic values)
-  umbilicalPressure: 15, // bar
+  umbilicalPressure: 10, // bar (starts at 10 bars at surface, varies with depth)
   diver1Pressure: 180, // bar
   diver2Pressure: 180, // bar
   cylinder1Volume: 100, // percentage
   cylinder2Volume: 100, // percentage
+  cylinder1Pressure: 200, // bar (100% = 200 bar)
+  cylinder2Pressure: 200, // bar (100% = 200 bar)
   
   // Computed Values
   ambientPressure: 3.0, // 1 + depth/10 = 1 + 20/10 = 3.0

@@ -8,7 +8,11 @@ import {
   calculateCylinderDepletion,
   calculateUmbilicalPressure,
   isLowCylinderVolume,
-  isLowUmbilicalPressure
+  isLowUmbilicalPressure,
+  calculateATA,
+  calculateNewCylinderPressure,
+  pressureToVolumePercentage,
+  calculateRemainingDiveTimeRealistic
 } from '../utils/calculations.js';
 
 // Create the diving simulation store with Zustand
@@ -37,8 +41,16 @@ const useDivingStore = create((set, get) => {
     setUmbilicalPressure: (pressure) => set(state => ({ ...state, umbilicalPressure: store.clampValue(pressure, SIMULATION_CONSTANTS.UMBILICAL_PRESSURE_RANGE) })),
     setDiver1Pressure: (pressure) => set(state => ({ ...state, diver1Pressure: store.clampValue(pressure, SIMULATION_CONSTANTS.DIVER_PRESSURE_RANGE) })),
     setDiver2Pressure: (pressure) => set(state => ({ ...state, diver2Pressure: store.clampValue(pressure, SIMULATION_CONSTANTS.DIVER_PRESSURE_RANGE) })),
-    setCylinder1Volume: (volume) => set(state => ({ ...state, cylinder1Volume: store.clampValue(volume, SIMULATION_CONSTANTS.CYLINDER_VOLUME_RANGE) })),
-    setCylinder2Volume: (volume) => set(state => ({ ...state, cylinder2Volume: store.clampValue(volume, SIMULATION_CONSTANTS.CYLINDER_VOLUME_RANGE) })),
+    setCylinder1Volume: (volume) => {
+      const clampedVolume = store.clampValue(volume, SIMULATION_CONSTANTS.CYLINDER_VOLUME_RANGE);
+      const pressure = (clampedVolume / 100) * 200; // Convert volume % to pressure (100% = 200 bar)
+      set(state => ({ ...state, cylinder1Volume: clampedVolume, cylinder1Pressure: pressure }));
+    },
+    setCylinder2Volume: (volume) => {
+      const clampedVolume = store.clampValue(volume, SIMULATION_CONSTANTS.CYLINDER_VOLUME_RANGE);
+      const pressure = (clampedVolume / 100) * 200; // Convert volume % to pressure (100% = 200 bar)
+      set(state => ({ ...state, cylinder2Volume: clampedVolume, cylinder2Pressure: pressure }));
+    },
 
 
 
@@ -75,27 +87,59 @@ const useDivingStore = create((set, get) => {
       if (state.useRealisticProfile) {
         get().updateRealisticDiveProfile(elapsedTime);
       } else {
-        // Original simple physics simulation
-        const totalAirUsed = calculateTotalAirConsumption(state.diver1Rate, state.diver2Rate, state.depth);
+        // Simple physics simulation using realistic gas consumption
+        const RMV = SIMULATION_CONSTANTS.RMV; // 15 L/min
+        const CYLINDER_VOLUME = SIMULATION_CONSTANTS.CYLINDER_VOLUME_LITERS; // 25 L
+        const START_PRESSURE = SIMULATION_CONSTANTS.START_PRESSURE_BAR; // 200 bar
 
-        const newCylinder1Volume = calculateCylinderDepletion(
-          state.cylinder1Volume,
-          totalAirUsed,
-          SIMULATION_CONSTANTS.CYLINDER_1_RATIO
+        // Get current pressures
+        const currentCyl1Pressure = state.cylinder1Pressure || START_PRESSURE;
+        const currentCyl2Pressure = state.cylinder2Pressure || START_PRESSURE;
+
+        // Use diver depths for more accurate calculations
+        const diver1Depth = state.diver1Depth || state.depth;
+        const diver2Depth = state.diver2Depth || state.depth;
+
+        // Calculate new pressures based on realistic physics
+        const newCyl1Pressure = calculateNewCylinderPressure(
+          currentCyl1Pressure,
+          diver1Depth,
+          1, // 1 second elapsed
+          RMV,
+          CYLINDER_VOLUME
         );
 
-        const newCylinder2Volume = calculateCylinderDepletion(
-          state.cylinder2Volume,
-          totalAirUsed,
-          SIMULATION_CONSTANTS.CYLINDER_2_RATIO
+        const newCyl2Pressure = calculateNewCylinderPressure(
+          currentCyl2Pressure,
+          diver2Depth,
+          1, // 1 second elapsed
+          RMV,
+          CYLINDER_VOLUME
         );
 
+        // Convert pressures to volume percentages
+        const newCylinder1Volume = pressureToVolumePercentage(newCyl1Pressure, START_PRESSURE);
+        const newCylinder2Volume = pressureToVolumePercentage(newCyl2Pressure, START_PRESSURE);
+
+        // Calculate other values
         const newUmbilicalPressure = calculateUmbilicalPressure(state.depth);
-        const newDiver1Pressure = calculateDiverPressure(newUmbilicalPressure, state.depth);
-        const newDiver2Pressure = calculateDiverPressure(newUmbilicalPressure, state.depth);
+        const newDiver1Pressure = calculateDiverPressure(newUmbilicalPressure, diver1Depth);
+        const newDiver2Pressure = calculateDiverPressure(newUmbilicalPressure, diver2Depth);
 
-        const ambientPressure = calculateAmbientPressure(state.depth);
-        const remainingDiveTime = calculateRemainingDiveTime(newCylinder1Volume, newCylinder2Volume, totalAirUsed);
+        const ambientPressure = calculateATA(state.depth);
+        const ata1 = calculateATA(diver1Depth);
+        const ata2 = calculateATA(diver2Depth);
+        const totalAirUsed = (ata1 * RMV + ata2 * RMV) / 2;
+
+        // Calculate remaining dive time based on remaining air and current average depth
+        const avgPressure = (newCyl1Pressure + newCyl2Pressure) / 2;
+        const avgDepth = (diver1Depth + diver2Depth) / 2;
+        const remainingDiveTime = calculateRemainingDiveTimeRealistic(
+          avgPressure,
+          avgDepth,
+          RMV,
+          CYLINDER_VOLUME
+        );
 
         set({
           umbilicalPressure: newUmbilicalPressure,
@@ -103,6 +147,8 @@ const useDivingStore = create((set, get) => {
           diver2Pressure: newDiver2Pressure,
           cylinder1Volume: newCylinder1Volume,
           cylinder2Volume: newCylinder2Volume,
+          cylinder1Pressure: newCyl1Pressure,
+          cylinder2Pressure: newCyl2Pressure,
           ambientPressure,
           totalAirUsed,
           remainingDiveTime
@@ -111,76 +157,106 @@ const useDivingStore = create((set, get) => {
       get().checkAndGenerateAlerts();
     },
 
-    // Realistic 60-minute dive profile compressed into 60000ms
+    // Realistic dive profile with depth changes every 10 seconds
+    // Every 10 seconds: increase depth by 10m until 40m, then decrease by 10m until 0m
+    // Profile: 0m→10m→20m→30m→40m→30m→20m→10m→0m
     updateRealisticDiveProfile: (elapsedTime) => {
-      // Total simulation time: 60000ms represents 60 minutes
-      const SIMULATION_DURATION = 60000; // 60 seconds
-      const DIVE_DURATION = 60; // 60 minutes
+      const state = get();
 
-      // Calculate current dive time in minutes (0-60)
-      const diveTimeMinutes = (elapsedTime / SIMULATION_DURATION) * DIVE_DURATION;
+      // Diving physics constants
+      const RMV = SIMULATION_CONSTANTS.RMV; // 15 L/min
+      const CYLINDER_VOLUME = SIMULATION_CONSTANTS.CYLINDER_VOLUME_LITERS; // 25 L
+      const START_PRESSURE = SIMULATION_CONSTANTS.START_PRESSURE_BAR; // 200 bar
 
-      // Clamp to 60 minutes max
-      const clampedDiveTime = Math.min(diveTimeMinutes, DIVE_DURATION);
+      // Calculate elapsed time in seconds
+      const elapsedSeconds = Math.floor(elapsedTime / 1000);
 
-      // Calculate depth based on dive profile
-      let currentDepth;
-      if (clampedDiveTime <= 10) {
-        // Descent phase: 0 → 30m over 10 minutes
-        currentDepth = (clampedDiveTime / 10) * 30;
-      } else if (clampedDiveTime <= 50) {
-        // Bottom phase: 30m for 40 minutes (10-50 min)
-        currentDepth = 30;
+      // Determine depth based on 10-second intervals
+      // Every 10 seconds: increase depth by 10m until 40m, then decrease by 10m until 0m
+      const interval = Math.floor(elapsedSeconds / 10); // Which 10-second interval are we in?
+
+      let diver1Depth, diver2Depth;
+
+      // Calculate depth progression
+      // Intervals 0-3: 0→10→20→30→40 (ascending every 10 seconds)
+      // Intervals 4+: 40→30→20→10→0 (descending every 10 seconds)
+      if (interval <= 4) {
+        // Ascending phase: 0m → 40m
+        diver1Depth = interval * 10;
+        diver2Depth = interval * 10;
       } else {
-        // Ascent phase: 30 → 0m over 10 minutes (50-60 min)
-        const ascentProgress = (clampedDiveTime - 50) / 10;
-        currentDepth = 30 * (1 - ascentProgress);
+        // Descending phase: 40m → 0m
+        const descentInterval = interval - 4;
+        diver1Depth = Math.max(0, 40 - (descentInterval * 10));
+        diver2Depth = Math.max(0, 40 - (descentInterval * 10));
       }
 
-      // Calculate ambient pressure: 1 bar + 1 bar per 10m
-      const ambientPressure = 1 + (currentDepth / 10);
+      // Get current pressures (or start pressure if first iteration)
+      const currentCyl1Pressure = state.cylinder1Pressure || START_PRESSURE;
+      const currentCyl2Pressure = state.cylinder2Pressure || START_PRESSURE;
 
-      // Umbilical pressure: constant 15 bar above ambient
-      const umbilicalPressure = ambientPressure + 15;
+      // Calculate new pressures based on depth and consumption
+      // Each update is 1 second = 1 minute of diving
+      const newCyl1Pressure = calculateNewCylinderPressure(
+        currentCyl1Pressure,
+        diver1Depth,
+        1, // 1 second elapsed
+        RMV,
+        CYLINDER_VOLUME
+      );
 
-      // Calculate cylinder pressures based on air consumption
-      // SAC rate: 15 L/min at surface, scales with ambient pressure
-      const sacRate = 15; // L/min at surface
-      const actualConsumption = sacRate * ambientPressure; // L/min at depth
+      const newCyl2Pressure = calculateNewCylinderPressure(
+        currentCyl2Pressure,
+        diver2Depth,
+        1, // 1 second elapsed
+        RMV,
+        CYLINDER_VOLUME
+      );
 
-      // Total air consumed so far (in liters)
-      const totalAirConsumed = actualConsumption * clampedDiveTime;
+      // Convert pressures to volume percentages
+      const cylinder1Volume = pressureToVolumePercentage(newCyl1Pressure, START_PRESSURE);
+      const cylinder2Volume = pressureToVolumePercentage(newCyl2Pressure, START_PRESSURE);
 
-      // Initial cylinder capacity: 12L × 2 × 200 bar = 4800L per diver
-      const initialCapacity = 4800; // Liters at 1 bar
+      // Calculate ambient pressure (average of both divers)
+      const avgDepth = (diver1Depth + diver2Depth) / 2;
+      const ambientPressure = calculateATA(avgDepth);
 
-      // Remaining air in liters
-      const remainingAir1 = Math.max(0, initialCapacity - totalAirConsumed);
-      const remainingAir2 = Math.max(0, initialCapacity - totalAirConsumed);
+      // Umbilical pressure: varies with depth (5 bars + 1 bar per 10m)
+      const umbilicalPressure = calculateUmbilicalPressure(avgDepth);
 
-      // Convert to percentage (0-100%)
-      const cylinder1Volume = (remainingAir1 / initialCapacity) * 100;
-      const cylinder2Volume = (remainingAir2 / initialCapacity) * 100;
+      // Diver pressures: based on umbilical pressure and depth
+      const diver1Pressure = calculateDiverPressure(umbilicalPressure, diver1Depth);
+      const diver2Pressure = calculateDiverPressure(umbilicalPressure, diver2Depth);
 
-      // Diver pressures: umbilical pressure minus line loss (minimal for surface supply)
-      const lineLoss = 0.5; // 0.5 bar line loss
-      const diver1Pressure = Math.max(0, umbilicalPressure - lineLoss);
-      const diver2Pressure = Math.max(0, umbilicalPressure - lineLoss);
+      // Calculate consumption rate at current depth
+      const ata1 = calculateATA(diver1Depth);
+      const ata2 = calculateATA(diver2Depth);
+      const totalAirUsed = (ata1 * RMV + ata2 * RMV) / 2; // Average consumption
 
-      // Calculate remaining dive time
-      const remainingAirAvg = (remainingAir1 + remainingAir2) / 2;
-      const remainingDiveTime = remainingAirAvg > 0 ? (remainingAirAvg / actualConsumption) : 0;
+      // Calculate remaining dive time based on remaining air and CURRENT DEPTH
+      // This tells us how many more minutes we can dive at the current depth
+      const avgPressure = (newCyl1Pressure + newCyl2Pressure) / 2;
+      const remainingDiveTime = calculateRemainingDiveTimeRealistic(
+        avgPressure,
+        avgDepth,
+        RMV,
+        CYLINDER_VOLUME
+      );
 
       // Update all values
       set({
-        depth: Math.round(currentDepth * 10) / 10,
+        diver1Depth: Math.round(diver1Depth * 10) / 10,
+        diver2Depth: Math.round(diver2Depth * 10) / 10,
+        depth: Math.round(avgDepth * 10) / 10,
         ambientPressure: Math.round(ambientPressure * 100) / 100,
         umbilicalPressure: Math.round(umbilicalPressure * 100) / 100,
         diver1Pressure: Math.round(diver1Pressure * 100) / 100,
         diver2Pressure: Math.round(diver2Pressure * 100) / 100,
+        cylinder1Pressure: Math.round(newCyl1Pressure * 10) / 10,
+        cylinder2Pressure: Math.round(newCyl2Pressure * 10) / 10,
         cylinder1Volume: Math.round(cylinder1Volume * 10) / 10,
         cylinder2Volume: Math.round(cylinder2Volume * 10) / 10,
-        totalAirUsed: Math.round(actualConsumption * 100) / 100,
+        totalAirUsed: Math.round(totalAirUsed * 100) / 100,
         remainingDiveTime: Math.round(remainingDiveTime * 10) / 10
       });
     },
@@ -334,6 +410,8 @@ const useDivingStore = create((set, get) => {
         diver2Pressure: INITIAL_STATE.diver2Pressure,
         cylinder1Volume: INITIAL_STATE.cylinder1Volume,
         cylinder2Volume: INITIAL_STATE.cylinder2Volume,
+        cylinder1Pressure: INITIAL_STATE.cylinder1Pressure,
+        cylinder2Pressure: INITIAL_STATE.cylinder2Pressure,
 
         // Reset computed values
         ambientPressure: INITIAL_STATE.ambientPressure,
