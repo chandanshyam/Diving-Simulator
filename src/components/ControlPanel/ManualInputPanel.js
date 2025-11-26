@@ -8,13 +8,13 @@ const ManualInputPanel = () => {
     umbilicalPressure,
     diver1Pressure,
     diver2Pressure,
-    cylinder1Volume,
-    cylinder2Volume,
+    cylinder1Pressure,
+    cylinder2Pressure,
     setUmbilicalPressure,
     setDiver1Pressure,
     setDiver2Pressure,
-    setCylinder1Volume,
-    setCylinder2Volume,
+    setCylinder1Pressure,
+    setCylinder2Pressure,
     updateComputedValues
   } = useDivingStore();
 
@@ -138,39 +138,39 @@ const ManualInputPanel = () => {
         </div>
 
         <div style={groupStyle}>
-          <label style={labelStyle}>Cylinder 1 Volume</label>
+          <label style={labelStyle}>Cylinder 1 Pressure</label>
           <input
             type="number"
-            value={cylinder1Volume ? cylinder1Volume.toFixed(1) : '0.0'}
+            value={cylinder1Pressure ? cylinder1Pressure.toFixed(1) : '0.0'}
             onChange={(e) => handleInputChange(
-              setCylinder1Volume, 
-              e.target.value, 
-              SIMULATION_CONSTANTS.CYLINDER_VOLUME_RANGE
+              setCylinder1Pressure,
+              e.target.value,
+              SIMULATION_CONSTANTS.CYLINDER_PRESSURE_RANGE
             )}
             style={inputStyle}
             step="1"
-            min={SIMULATION_CONSTANTS.CYLINDER_VOLUME_RANGE.min}
-            max={SIMULATION_CONSTANTS.CYLINDER_VOLUME_RANGE.max}
+            min={SIMULATION_CONSTANTS.CYLINDER_PRESSURE_RANGE.min}
+            max={SIMULATION_CONSTANTS.CYLINDER_PRESSURE_RANGE.max}
           />
-          <span style={{ fontSize: '10px', color: '#94a3b8' }}>%</span>
+          <span style={{ fontSize: '10px', color: '#94a3b8' }}>bar</span>
         </div>
 
         <div style={groupStyle}>
-          <label style={labelStyle}>Cylinder 2 Volume</label>
+          <label style={labelStyle}>Cylinder 2 Pressure</label>
           <input
             type="number"
-            value={cylinder2Volume ? cylinder2Volume.toFixed(1) : '0.0'}
+            value={cylinder2Pressure ? cylinder2Pressure.toFixed(1) : '0.0'}
             onChange={(e) => handleInputChange(
-              setCylinder2Volume, 
-              e.target.value, 
-              SIMULATION_CONSTANTS.CYLINDER_VOLUME_RANGE
+              setCylinder2Pressure,
+              e.target.value,
+              SIMULATION_CONSTANTS.CYLINDER_PRESSURE_RANGE
             )}
             style={inputStyle}
             step="1"
-            min={SIMULATION_CONSTANTS.CYLINDER_VOLUME_RANGE.min}
-            max={SIMULATION_CONSTANTS.CYLINDER_VOLUME_RANGE.max}
+            min={SIMULATION_CONSTANTS.CYLINDER_PRESSURE_RANGE.min}
+            max={SIMULATION_CONSTANTS.CYLINDER_PRESSURE_RANGE.max}
           />
-          <span style={{ fontSize: '10px', color: '#94a3b8' }}>%</span>
+          <span style={{ fontSize: '10px', color: '#94a3b8' }}>bar</span>
         </div>
       </div>
       

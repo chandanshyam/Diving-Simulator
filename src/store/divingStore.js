@@ -51,27 +51,127 @@ const useDivingStore = create((set, get) => {
       const pressure = (clampedVolume / 100) * 200; // Convert volume % to pressure (100% = 200 bar)
       set(state => ({ ...state, cylinder2Volume: clampedVolume, cylinder2Pressure: pressure }));
     },
+    setCylinder1Pressure: (pressure) => {
+      const clampedPressure = store.clampValue(pressure, SIMULATION_CONSTANTS.CYLINDER_PRESSURE_RANGE);
+      const volume = (clampedPressure / 200) * 100; // Convert pressure (bars) to volume % (200 bar = 100%)
+      set(state => ({ ...state, cylinder1Pressure: clampedPressure, cylinder1Volume: volume }));
+    },
+    setCylinder2Pressure: (pressure) => {
+      const clampedPressure = store.clampValue(pressure, SIMULATION_CONSTANTS.CYLINDER_PRESSURE_RANGE);
+      const volume = (clampedPressure / 200) * 100; // Convert pressure (bars) to volume % (200 bar = 100%)
+      set(state => ({ ...state, cylinder2Pressure: clampedPressure, cylinder2Volume: volume }));
+    },
 
 
 
     // Update computed values in state
     updateComputedValues: () => {
       const state = get();
-      const depth = state.depth || 0;
-      const diver1Rate = state.diver1Rate || 0;
-      const diver2Rate = state.diver2Rate || 0;
-      const cylinder1Volume = state.cylinder1Volume || 0;
-      const cylinder2Volume = state.cylinder2Volume || 0;
+      const RMV = SIMULATION_CONSTANTS.RMV;
+      const CYLINDER_VOLUME = SIMULATION_CONSTANTS.CYLINDER_VOLUME_LITERS;
 
-      const ambientPressure = calculateAmbientPressure(depth);
-      const totalAirUsed = calculateTotalAirConsumption(diver1Rate, diver2Rate, depth);
-      const remainingDiveTime = calculateRemainingDiveTime(cylinder1Volume, cylinder2Volume, totalAirUsed);
+      // Get diver depths
+      const diver1Depth = state.diver1Depth || 0;
+      const diver2Depth = state.diver2Depth || 0;
+      const avgDepth = (diver1Depth + diver2Depth) / 2;
+
+      // Get cylinder pressures
+      const cylinder1Pressure = state.cylinder1Pressure || 200;
+      const cylinder2Pressure = state.cylinder2Pressure || 200;
+      const avgPressure = (cylinder1Pressure + cylinder2Pressure) / 2;
+
+      // Calculate ambient pressure
+      const ambientPressure = calculateATA(avgDepth);
+
+      // Calculate umbilical pressure based on depth (10 + depth/10)
+      const umbilicalPressure = calculateUmbilicalPressure(avgDepth);
+
+      // Calculate diver pressures
+      const diver1Pressure = calculateDiverPressure(umbilicalPressure, diver1Depth);
+      const diver2Pressure = calculateDiverPressure(umbilicalPressure, diver2Depth);
+
+      // Calculate total air consumption
+      const ata1 = calculateATA(diver1Depth);
+      const ata2 = calculateATA(diver2Depth);
+      const totalAirUsed = (ata1 * RMV + ata2 * RMV) / 2;
+
+      // Calculate remaining dive time using realistic formula
+      const remainingDiveTime = calculateRemainingDiveTimeRealistic(
+        avgPressure,
+        avgDepth,
+        RMV,
+        CYLINDER_VOLUME
+      );
 
       set({
+        umbilicalPressure,
+        diver1Pressure,
+        diver2Pressure,
         ambientPressure,
         totalAirUsed,
         remainingDiveTime
       });
+    },
+
+    // Handle manual depth change with gas consumption simulation
+    // Simulates time passing and gas consumption when depth slider is moved
+    handleManualDepthChange: (diverNumber, oldDepth, newDepth, timePassed) => {
+      const state = get();
+      const RMV = SIMULATION_CONSTANTS.RMV; // 15 L/min
+      const CYLINDER_VOLUME = SIMULATION_CONSTANTS.CYLINDER_VOLUME_LITERS; // 25 L
+
+      // Calculate average depth during the transition
+      const avgDepthDuringChange = (oldDepth + newDepth) / 2;
+
+      // Get current cylinder pressures
+      const currentCyl1Pressure = state.cylinder1Pressure || 200;
+      const currentCyl2Pressure = state.cylinder2Pressure || 200;
+
+      // Determine which cylinder to update based on diver number
+      let newCyl1Pressure = currentCyl1Pressure;
+      let newCyl2Pressure = currentCyl2Pressure;
+
+      if (diverNumber === 1) {
+        // Diver 1 uses Cylinder 1 - calculate gas consumption at average depth
+        newCyl1Pressure = calculateNewCylinderPressure(
+          currentCyl1Pressure,
+          avgDepthDuringChange,
+          timePassed, // Time in minutes
+          RMV,
+          CYLINDER_VOLUME
+        );
+      } else if (diverNumber === 2) {
+        // Diver 2 uses Cylinder 2 - calculate gas consumption at average depth
+        newCyl2Pressure = calculateNewCylinderPressure(
+          currentCyl2Pressure,
+          avgDepthDuringChange,
+          timePassed, // Time in minutes
+          RMV,
+          CYLINDER_VOLUME
+        );
+      }
+
+      // Convert pressures to volumes
+      const cylinder1Volume = pressureToVolumePercentage(newCyl1Pressure, 200);
+      const cylinder2Volume = pressureToVolumePercentage(newCyl2Pressure, 200);
+
+      // Update diver depth
+      if (diverNumber === 1) {
+        set({ diver1Depth: newDepth });
+      } else if (diverNumber === 2) {
+        set({ diver2Depth: newDepth });
+      }
+
+      // Update cylinder pressures and volumes
+      set({
+        cylinder1Pressure: newCyl1Pressure,
+        cylinder2Pressure: newCyl2Pressure,
+        cylinder1Volume: cylinder1Volume,
+        cylinder2Volume: cylinder2Volume
+      });
+
+      // Recalculate all other values
+      setTimeout(() => get().updateComputedValues(), 0);
     },
 
     // Physics-based simulation update for auto mode
