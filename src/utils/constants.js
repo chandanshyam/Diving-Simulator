@@ -24,7 +24,7 @@ export const SIMULATION_CONSTANTS = {
 
   // Realistic Diving Physics Constants
   RMV: 15, // Respiratory Minute Volume at surface (L/min)
-  CYLINDER_VOLUME_LITERS: 25, // Cylinder volume in liters
+  CYLINDER_VOLUME_LITERS: 50, // Cylinder volume in liters (standard scuba cylinder)
   START_PRESSURE_BAR: 200, // Starting pressure in bars
   
   // Gauge Ranges and Thresholds
